@@ -1,0 +1,346 @@
+/*
+ * To change this license header, choose License Headers in Project Properties.
+ * To change this template file, choose Tools | Templates
+ * and open the template in the editor.
+ */
+package com.main;
+
+import com.ximpleware.EntityException;
+import com.ximpleware.ParseException;
+import com.ximpleware.VTDException;
+import com.ximpleware.VTDGen;
+import com.ximpleware.VTDNav;
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileWriter;
+import java.io.IOException;
+import java.io.InputStream;
+import java.util.Enumeration;
+import java.util.Iterator;
+import java.util.Map;
+import java.util.Properties;
+import java.util.Set;
+import java.util.TreeMap;
+
+/**
+ *
+ * @author Admin
+ */
+public class Main {
+
+    private static TreeMap<String, String> mapaNW = new TreeMap<>();
+    private static final String ar_counter[] = {"M128B2C2", "M357B3C1", "M357B3C7", "M357B3C2", "M357B3C8", "M396B2C2", "M396B2C3", "M20B2C2",
+        "M20B2C12", "M80B2C6", "M119B2C2", "M119B2C3", "M406B2C2", "M406B2C3"}; //"M128B2C3", "M128B2C4", M20B2C12
+
+    private static String[] ar_equip2 = {"TCAT-78", "TCAT-80", "SERVICE-149", "SERVICE-150"};
+    private static String[] ar_ciudad = {"400865", "401861"};
+    private static String[] tipo_medicion = {"SERVI", "SIP", "TC", "VLRNTAS", "SIMCTAS", "CLOM", "MCAPLICU"};
+    private static int contador = 0;
+    private static final String COMMA_DELIMITER = ",";
+    private static final String NEW_LINE_SEPARATOR = "\n";
+
+    public static void main(String[] args) throws IOException, EntityException, ParseException {
+        process("C:\\Users\\Admin\\Documents\\NetBeansProjects\\xml-test\\Data\\etlexpmx_TAS_20170306001156_3300255.xml", "C:\\Users\\Admin\\Documents\\NetBeansProjects\\xml-test\\Data\\CSV\\archivo.csv");
+        // mostrarMapa(mapaNW);
+    }
+
+    /**
+     * Realiza la gestion principal de procesos del parser
+     *
+     * @param filePath path del archivo xml
+     * @throws IOException falla de lectura de archvo
+     */
+    public static void process(String filePath, String fileName) throws IOException {
+        try {
+            File f = new File(filePath);// path del xml a leer
+            FileInputStream fis = new FileInputStream(f);
+            byte[] b = new byte[(int) f.length()];
+            fis.read(b);
+            VTDGen vg = new VTDGen();
+            vg.setDoc(b);
+            vg.parse(true);
+            VTDNav vn = vg.getNav();
+            
+            FileWriter filewriter = new FileWriter(fileName, true);
+            try {
+                //mapaNW.put("FECHA","");
+                for (int i = 0; i < ar_ciudad.length; i++) {
+                    if (ar_ciudad[i].equals("400865")) {
+                        mapaNW.put("EQUIPO", "CORDOBA");
+                        mapaNW.put("MEDICION1", "");
+                        mapaNW.put("MEDICION2", "");
+                    } else {
+                        if (ar_ciudad[i].equals("401861")) {
+                            //System.out.println("EQUIPO: TORCUATO");
+                            mapaNW.put("EQUIPO", "TORCUATO");
+                            mapaNW.put("MEDICION1", "");
+                            mapaNW.put("MEDICION2", "");
+                        }
+                    }
+                }
+                for (int k = 0; k < ar_counter.length; k++) {
+                    mapaNW.put(ar_counter[k], "");
+                }
+
+                createHeaderCsv(fileName, mapaNW);
+                
+                // mostrarMapa(mapaNW);
+                //writeCSV(filewriter, tm);
+            } catch (Exception e) {
+            }
+            
+            getEq2(vn,filewriter);
+
+            System.out.println("Cantidad: " + contador);
+        } catch (ParseException e) {
+            System.out.println("error de parseo:" + e.getMessage() + "en FileName:" + filePath);
+        } catch (IOException ex) {
+            System.out.println("" + ex.getMessage());
+        }
+
+    }// fin process
+
+    public static void mostrarMapa(TreeMap<String, String> csvMapAll) {
+        Set set = csvMapAll.entrySet();
+        Iterator iter = set.iterator();
+        while (iter.hasNext()) {
+            Map.Entry me = (Map.Entry) iter.next();
+            System.out.println(me.getKey() + ":" + me.getValue());
+        }
+    }
+
+    public static void getEq2(VTDNav vn, FileWriter filewriter) throws IOException {
+        try {
+            TreeMap<String,String> tm = new TreeMap<>();
+            vn.toElement(VTDNav.FC, "OMeS");
+            if (vn.toElement(VTDNav.FC, "PMSetup")) {
+                do {
+                    do {
+                        vn.toElement(VTDNav.FC, "PMMOResult");
+                        //all code here !!!
+                        ///////////TODOS LOS NODOS MO /////////////////////////////////////
+                        if (vn.toElement(VTDNav.FC, "MO")) {//navega hacia el primer nodo hijo
+                            do {
+                                if (vn.toElement(VTDNav.FC, "DN")) {
+                                    if (vn.toNormalizedString(vn.getText()).contains("TAS")) {
+                                        if ((vn.toNormalizedString(vn.getText()).contains("400865"))) {
+                                            System.out.println("EQUIPO: CORDOBA");
+//                                            if ((getSegundoDN(vn.toNormalizedString(vn.getText()).substring(10, vn.toNormalizedString(vn.getText()).length()))) != null) {
+//                                                System.out.println(getSegundoDN(vn.toNormalizedString(vn.getText()).substring(10, vn.toNormalizedString(vn.getText()).length())));
+//                                            }
+                                            mapaNW.put("EQUIPO", "CORDOBA");
+                                        } else {
+                                            if (vn.toNormalizedString(vn.getText()).contains("401861")) {
+                                                System.out.println("EQUIPO: TORCUATO");
+//                                                if ((getSegundoDN(vn.toNormalizedString(vn.getText()).substring(10, vn.toNormalizedString(vn.getText()).length()))) != null) {
+//                                                    System.out.println(getSegundoDN(vn.toNormalizedString(vn.getText()).substring(10, vn.toNormalizedString(vn.getText()).length())));
+//                                                }
+                                                mapaNW.put("EQUIPO", "TORCUATO");
+                                            }
+                                        }
+                                    }
+                                    for (int i = 0; i < ar_equip2.length; i++) {
+                                        if (vn.toNormalizedString(vn.getText()).contains(ar_equip2[i])) {
+                                            System.out.println(vn.toNormalizedString(vn.getText()));
+                                            mapaNW.put("MEDICION1", vn.toNormalizedString(vn.getText()));
+                                        }
+                                    }
+
+                                }
+                                vn.toElement(VTDNav.P, "MO");
+                            } while (vn.toElement(VTDNav.NS, "MO"));//navega en todos los nodos hnos
+                        }
+
+                        ////////////////////////////SOLO PM TARGET///////////////////////////
+                        if (vn.toElement(VTDNav.NS, "PMTarget")) {
+                            //if (getCounter(vn.toString(vn.getAttrVal("measurementType"))) != null) {
+                            for (int j = 0; j < tipo_medicion.length; j++) {
+                                if (vn.toNormalizedString(vn.getAttrVal("measurementType")).equals(tipo_medicion[j])) {
+                                    //                                vn.toElement(VTDNav.NS,"MO");
+                                    //                                vn.toElement(VTDNav.FC,"DN");
+                                    //                                vn.toElement(VTDNav.NS,"DN");
+                                    ///////////////////////////////////LA CONCHA DE SU MADRE, VALIDAR SEGUNDO CDATA, PUTO////////////////////////////////////////////
+                                    System.out.println("MEDICIÓN2: " + vn.toString(vn.getAttrVal("measurementType")));
+                                    //contador++;
+                                    mapaNW.put("MEDICION2", vn.toString(vn.getAttrVal("measurementType")));
+
+                                    for (int i = 0; i < ar_counter.length; i++) {
+                                        if (vn.toElement(VTDNav.FC, ar_counter[i])) {
+                                            System.out.println("CONTADOR: " + ar_counter[i]);
+                                            System.out.println("VALOR: " + vn.toNormalizedString(vn.getText()).toString());
+                                            System.out.println("---------------------------------------");
+                                            mapaNW.put(ar_counter[i], vn.toNormalizedString(vn.getText()).toString());
+                                            vn.toElement(VTDNav.P);
+                                        } else {
+                                            mapaNW.put(ar_counter[i],"NULL");
+                                            vn.toElement(VTDNav.NS);
+                                            //System.out.println("ÉSTE NO ES UNA MEDICION PEDIDA, QUIZAS LA SIGUIENTE SI");
+                                        }
+                                    }
+                                }
+                                mapaNW.put("MEDICION2",vn.toString(vn.getAttrVal("measurementType")));
+                                
+                            }
+                        }
+                        //ESCRIBIR
+                            tm = addCounterNulls(mapaNW);
+                            tm.putAll(mapaNW);
+                            writeCSV(filewriter, mapaNW);
+                            mapaNW.clear();
+                            
+                        try {
+
+                        } catch (Exception e) {
+                            System.out.println(e.getMessage());
+                        }   
+                        vn.toElement(VTDNav.P, "PMMOResult");
+                    } while (vn.toElement(VTDNav.NS, "PMMOResult"));
+                    //System.out.println(vn.toString(vn.getCurrentIndex()));
+                    vn.toElement(VTDNav.P, "PMSetup");
+                } while (vn.toElement(VTDNav.NS, "PMSetup"));
+            }
+
+        } catch (VTDException ex) {
+        } finally {
+            filewriter.close();
+        }
+    }
+
+    public static boolean getNodo(String nodo) {
+        for (int i = 0; i < ar_counter.length; i++) {
+            if (nodo.equals(ar_counter[i])) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    public static String getCounter(String string) {
+        InputStream entrada_contadores = null;
+        //TreeMap<String, String> propertieMap = new TreeMap<>();
+        Properties propiedades = new Properties();
+        try {
+            entrada_contadores = new FileInputStream("C:\\Users\\Admin\\Documents\\NetBeansProjects\\xml-test\\resources\\nokiawifi.properties");
+            propiedades.load(entrada_contadores);
+            for (Enumeration e = propiedades.keys(); e.hasMoreElements();) {
+                Object obj = e.nextElement();
+
+                if (obj.equals(string)) {
+                    return (String) obj;
+                }
+                //  propertieMap.put((String)obj, propiedades.getProperty(obj.toString()));                        
+            }
+            return null;
+
+        } catch (IOException exIO) {
+            System.out.println("Propertie File:" + exIO.getMessage());
+
+        } finally {
+            if (entrada_contadores != null) {
+                try {
+                    entrada_contadores.close();
+                } catch (IOException e) {
+                    System.out.println("Propertie File:" + e.getMessage());
+
+                }
+            }
+        }
+        return null;
+    }
+
+    public static String getSegundoDN(String aux) {
+        for (int i = 0; i < ar_equip2.length; i++) {
+
+            if (aux.equals(ar_equip2[i])) {
+                return ar_equip2[i];
+            }
+
+        }
+        return null;
+    }
+
+    public static void createHeaderCsv(String fileName, TreeMap<String, String> mapaNW) throws IOException {
+        FileWriter fileWriter = new FileWriter(fileName, true);
+        try {
+            fileWriter.append("" + headerCsv(mapaNW));
+            fileWriter.append("" + NEW_LINE_SEPARATOR);
+        } catch (IOException e) {
+        } finally {
+            try {
+                fileWriter.close();
+            } catch (IOException e) {
+            }
+        }
+    }
+
+    public static void writeCSV(FileWriter fileWriter, TreeMap csvMapAll) throws IOException {
+        // FileWriter fileWriter=new FileWriter(fileName,true);
+        //TreeMap<String,String> propertieMap=pf.loadPropertieMap();
+        Set set = csvMapAll.entrySet();
+        int counter = 0;
+        Iterator iter = set.iterator();
+        while (iter.hasNext()) {
+            Map.Entry me = (Map.Entry) iter.next();
+            counter++;
+            if (mapaNW.containsKey(me.getKey().toString())) {
+
+                if (!(counter < csvMapAll.size())) {
+                    fileWriter.append("" + me.getValue().toString());
+                    fileWriter.append("" + NEW_LINE_SEPARATOR);
+                    //  System.out.println("registro finalizado"+"counter: "+counter);
+
+                } else {
+                    fileWriter.append("" + me.getValue().toString());
+                    fileWriter.append("" + COMMA_DELIMITER);
+                }
+            }
+        }
+        try {
+            fileWriter.flush();
+        } catch (Exception e) {
+            System.out.println(e.getMessage());
+        }
+
+    }
+
+    public static TreeMap addCounterNulls(TreeMap csvMap) {
+        TreeMap<String, String> newmap = new TreeMap<>();
+//       PropertyFile pf=new PropertyFile();
+        Set set = mapaNW.entrySet();
+        Iterator iter = set.iterator();
+        while (iter.hasNext()) {
+            Map.Entry me = (Map.Entry) iter.next();
+            if ((validarKeyCsvMap(me.getKey().toString(), csvMap)) == 0) {
+                newmap.put(me.getKey().toString(), "");
+            }
+        }
+        return newmap;
+    }//Fin addCounternulls
+
+    public static String headerCsv(TreeMap<String, String> mapaNW) {
+        String header = "";
+        Set set = mapaNW.entrySet();
+        Iterator iter = set.iterator();
+        while (iter.hasNext()) {
+            Map.Entry me = (Map.Entry) iter.next();
+            header += me.getKey() + COMMA_DELIMITER;
+        }
+        if (header.endsWith(COMMA_DELIMITER)) {
+            header = header.substring(0, header.length() - 1);
+        }
+        header = header.replaceAll("\\s+", "");
+        return header;
+    }
+
+    public static int validarKeyCsvMap(String clave, TreeMap csvMap) {
+        Set set = csvMap.entrySet();
+        Iterator iter = set.iterator();
+        while (iter.hasNext()) {
+            Map.Entry me = (Map.Entry) iter.next();
+            if (me.getKey().equals(clave)) {
+                return 1;
+            }
+        }
+        return 0;
+    }
+}
