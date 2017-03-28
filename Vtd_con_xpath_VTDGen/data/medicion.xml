@@ -1,0 +1,19 @@
+<?xml version="1.0"?>
+<timeseries>
+    <measurement year="2000">
+        <item name="A">8.5</item>
+        <item name="B">9.8</item>
+    </measurement>
+    <measurement year="2001">
+        <item name="A">12.2</item>
+        <item name="B">9.4</item>
+    </measurement>
+    <measurement year="2002">
+        <item name="A">11.1</item>
+        <item name="B">7.2</item>
+    </measurement>
+	<measurement year="2002">
+        <item name="A">13</item>
+        <item name="B">23</item>
+    </measurement>
+</timeseries>
