@@ -1,0 +1,144 @@
+/*
+ * To change this license header, choose License Headers in Project Properties.
+ * To change this template file, choose Tools | Templates
+ * and open the template in the editor.
+ */
+package xml.test.objects;
+
+import com.ximpleware.*;
+import com.ximpleware.extended.AutoPilotHuge;
+import com.ximpleware.extended.NavExceptionHuge;
+import com.ximpleware.extended.VTDGenHuge;
+import com.ximpleware.extended.VTDNavHuge;
+import com.ximpleware.extended.XPathEvalExceptionHuge;
+import com.ximpleware.extended.XPathParseExceptionHuge;
+import java.io.FileWriter;
+import java.io.IOException;
+import java.util.Iterator;
+import java.util.Map;
+import java.util.Set;
+import java.util.TreeMap;
+
+/**
+ *
+ * @author mchamparini
+ */
+public class Main {
+
+    /**
+     * @param args the command line arguments
+     */
+    private static TreeMap<String, String> mapaNW = new TreeMap<>();
+    private static final String COMMA_DELIMITER = ",";
+    private static final String NEW_LINE_SEPARATOR = "\n";
+    private static TreeMap<String, String> mapaCampos = new TreeMap<>();
+    
+    
+    public static void main(String args[]) throws NavExceptionHuge, XPathEvalExceptionHuge, XPathParseExceptionHuge, IOException {
+        String fileCsv = "C:\\Users\\Admin\\Documents\\NetBeansProjects\\xml-test-objects\\Data\\CSV\\object_tas.csv";//"C:\\Users\\Admin\\Documents\\NetBeansProjects\\xml-test-objects\\Data\\CSV\\object_tas.csv"
+        FileWriter filewriter = new FileWriter(fileCsv,true);
+        VTDGenHuge vgh = new VTDGenHuge();
+        if (vgh.parseFile("C:\\Users\\Admin\\Documents\\NetBeansProjects\\xml-test-objects\\Data\\XML\\plmnrc6_Nokia3g", true, VTDGenHuge.MEM_MAPPED)) {
+            VTDNavHuge vn = vgh.getNav();
+            AutoPilotHuge aph = new AutoPilotHuge(vn);
+            aph.selectXPath("//managedObject[@class='TAS']");
+            int result = 0;
+            int count = 0;
+            aph.bind(vn);
+            
+            mapaCampos.put("TAS_CLASS","");
+            mapaCampos.put("TAS_VERSION","");
+            mapaCampos.put("TAS_DISTNAME","");
+            mapaCampos.put("TAS_ID","");
+            
+            createHeaderCsv(fileCsv, mapaCampos);
+            
+            while ((result = aph.evalXPath()) != -1) {
+
+//                System.out.print("Element name ==> " + vn.toString(result) + " CLASE: " + vn.toString(vn.getAttrVal("class"))
+//                        + " VERSION: " + vn.toString(vn.getAttrVal("version"))
+//                        + " DISTNAME: " + vn.toString(vn.getAttrVal("distName"))
+//                        + " ID: " + vn.toString(vn.getAttrVal("id")));
+                
+                mapaNW.put("TAS_CLASS",vn.toString(vn.getAttrVal("class")));
+                mapaNW.put("TAS_VERSION",vn.toString(vn.getAttrVal("version")));
+                mapaNW.put("TAS_DISTNAME",vn.toString(vn.getAttrVal("distName")));
+                mapaNW.put("TAS_ID",vn.toString(vn.getAttrVal("id")));
+                
+                int t = vn.getText();
+                //if (t != -1) {
+                if (vn.toElement(VTDNav.FC, "p")) {
+                    //System.out.println(" NODO P: " + vn.toNormalizedString(vn.getText()));
+                    mapaNW.put("TAS_NAME",vn.toNormalizedString(vn.getText()));
+                }
+                //}
+                vn.toElement(VTDNav.PARENT,"managedObject");
+                System.out.println("\n ============================== ");
+                count++;   
+                
+                writeCSV(filewriter, mapaNW);
+            }
+            System.out.println("Total # of element " + count);
+            
+        }
+    }
+    
+        public static void writeCSV(FileWriter fileWriter, TreeMap csvMapAll) throws IOException {
+        // FileWriter fileWriter=new FileWriter(fileName,true);
+        //TreeMap<String,String> propertieMap=pf.loadPropertieMap();
+        Set set = csvMapAll.entrySet();
+        int counter = 0;
+        Iterator iter = set.iterator();
+        while (iter.hasNext()) {
+            Map.Entry me = (Map.Entry) iter.next();
+            counter++;
+            if (mapaNW.containsKey(me.getKey().toString())) {
+
+                if (!(counter < csvMapAll.size())) {
+                    fileWriter.append("" + me.getValue().toString());
+                    fileWriter.append("" + NEW_LINE_SEPARATOR);
+                    //  System.out.println("registro finalizado"+"counter: "+counter);
+
+                } else {
+                    fileWriter.append("" + me.getValue().toString());
+                    fileWriter.append("" + COMMA_DELIMITER);
+                }
+            }
+        }
+        try {
+            fileWriter.flush();
+        } catch (Exception e) {
+            System.out.println(e.getMessage());
+        }
+
+    }
+
+    public static String headerCsv(TreeMap<String, String> mapaNW) {
+        String header = "";
+        Set set = mapaNW.entrySet();
+        Iterator iter = set.iterator();
+        while (iter.hasNext()) {
+            Map.Entry me = (Map.Entry) iter.next();
+            header += me.getKey() + COMMA_DELIMITER;
+        }
+        if (header.endsWith(COMMA_DELIMITER)) {
+            header = header.substring(0, header.length() - 1);
+        }
+        header = header.replaceAll("\\s+", "");
+        return header;
+    }
+    
+    public static void createHeaderCsv(String fileName, TreeMap<String, String> mapaNW) throws IOException {
+        FileWriter fileWriter = new FileWriter(fileName, true);
+        try {
+            fileWriter.append("" + headerCsv(mapaNW));
+            fileWriter.append("" + NEW_LINE_SEPARATOR);
+        } catch (IOException e) {
+        } finally {
+            try {
+                fileWriter.close();
+            } catch (IOException e) {
+            }
+        }
+    }
+}
