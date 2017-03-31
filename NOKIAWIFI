@@ -15,19 +15,25 @@ import java.io.FileInputStream;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.io.InputStream;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.Enumeration;
 import java.util.Iterator;
+import java.util.List;
 import java.util.Map;
 import java.util.Properties;
 import java.util.Set;
 import java.util.TreeMap;
+import java.util.stream.Collectors;
 
 /**
  *
- * @author Admin
+ * @author Lopez Juan
  */
 public class Main {
 
+    public static List<File> filesInFolder;
     private static TreeMap<String, String> mapaNW = new TreeMap<>();
     private static final String ar_counter[] = {"M128B2C2", "M357B3C1", "M357B3C7", "M357B3C2", "M357B3C8", "M396B2C2", "M396B2C3", "M20B2C2",
         "M20B2C12", "M80B2C6", "M119B2C2", "M119B2C3", "M406B2C2", "M406B2C3"}; //"M128B2C3", "M128B2C4", M20B2C12
@@ -38,9 +44,47 @@ public class Main {
     private static int contador = 0;
     private static final String COMMA_DELIMITER = ",";
     private static final String NEW_LINE_SEPARATOR = "\n";
+    private static String NOMBREXML;
+    private static String PMSETUP;
+    private static String FECHA;
+    private static String DIA;
+    private static String MES;
+    private static String AÑO;
+    private static int HORA;
+    ///////////////////////////////
+    private static String DIASET;
+    private static String MESSET;
+    private static String AÑOSET;
+    private static int HORASET;
+    private static String FECHASET;
+    private static int HORASETMIN;
 
-    public static void main(String[] args) throws IOException, EntityException, ParseException {
-        process("C:\\Users\\Admin\\Documents\\NetBeansProjects\\xml-test\\Data\\etlexpmx_TAS_20170306001156_3300255.xml", "C:\\Users\\Admin\\Documents\\NetBeansProjects\\xml-test\\Data\\CSV\\archivo.csv");
+    ///////////////////////////
+    public static void main(String[] args) throws IOException, EntityException, ParseException, java.text.ParseException {
+        filesInFolder = Files.walk(Paths.get("C:\\Users\\Admin\\Documents\\NetBeansProjects\\xml-test\\Data\\XML"))//args[0] lista de archivos a procesar  "C:\\Users\\Admin\\Documents\\NetBeansProjects\\xml-test\\Data\\XML"
+                .filter(Files::isRegularFile)
+                .map(Path::toFile)
+                .collect(Collectors.toList());
+        for (int i = 0; i < filesInFolder.size(); i++) {
+            //tratar fecha
+            NOMBREXML = filesInFolder.get(0).toString().substring(0, (int) filesInFolder.get(0).toString().length());
+            String [] parts=NOMBREXML.split("TAS_"); //Respetar directorio de los XML en el servidor
+            FECHA = parts[1];
+            FECHA=FECHA.substring(0, 10);
+            //System.out.println(FECHA);
+            DIA=FECHA.substring(6, 8);
+            MES=FECHA.substring(4, 6);
+            AÑO=FECHA.substring(0, 4);            
+            HORA = Integer.parseInt(FECHA.substring(8, 10));
+            //HORA=FECHA.substring(8, 10);
+            //FECHA=DIA+MES+AÑO+HORA;
+            Integer aux_hora_csv = HORA-1;
+            FECHA=DIA+MES+AÑO+aux_hora_csv;
+            process(filesInFolder.get(i).getPath(), "C:\\Users\\Admin\\Documents\\NetBeansProjects\\xml-test\\Data\\CSV\\archivo_TAS_" + FECHA + "_" + i + ".csv", FECHA);
+            //System.out.println(FECHA);
+            //process(filesInFolder.get(i).getPath(), "C:\\Users\\Admin\\Documents\\NetBeansProjects\\xml-test\\Data\\CSV\\archivo_TAS_"+FECHA+"_"+i+".csv",FECHA);
+        }
+
         // mostrarMapa(mapaNW);
     }
 
@@ -50,7 +94,7 @@ public class Main {
      * @param filePath path del archivo xml
      * @throws IOException falla de lectura de archvo
      */
-    public static void process(String filePath, String fileName) throws IOException {
+    public static void process(String filePath, String fileName, String fecha) throws IOException {
         try {
             File f = new File(filePath);// path del xml a leer
             FileInputStream fis = new FileInputStream(f);
@@ -60,10 +104,10 @@ public class Main {
             vg.setDoc(b);
             vg.parse(true);
             VTDNav vn = vg.getNav();
-            
+
             FileWriter filewriter = new FileWriter(fileName, true);
             try {
-                //mapaNW.put("FECHA","");
+                mapaNW.put("FECHA", FECHASET);
                 for (int i = 0; i < ar_ciudad.length; i++) {
                     if (ar_ciudad[i].equals("400865")) {
                         mapaNW.put("EQUIPO", "CORDOBA");
@@ -83,13 +127,13 @@ public class Main {
                 }
 
                 createHeaderCsv(fileName, mapaNW);
-                
+
                 // mostrarMapa(mapaNW);
                 //writeCSV(filewriter, tm);
             } catch (Exception e) {
             }
-            
-            getEq2(vn,filewriter);
+
+            getEq2(vn, filewriter, fecha);
 
             System.out.println("Cantidad: " + contador);
         } catch (ParseException e) {
@@ -109,11 +153,55 @@ public class Main {
         }
     }
 
-    public static void getEq2(VTDNav vn, FileWriter filewriter) throws IOException {
+    public static void getEq2(VTDNav vn, FileWriter filewriter, String fecha) throws IOException {
         try {
-            TreeMap<String,String> tm = new TreeMap<>();
+
+            //TreeMap<String,String> tm = new TreeMap<>();
             vn.toElement(VTDNav.FC, "OMeS");
             if (vn.toElement(VTDNav.FC, "PMSetup")) {
+                PMSETUP = vn.toNormalizedString(vn.getAttrVal("startTime"));
+                System.out.println("PMSetup: " + PMSETUP);
+                AÑOSET = PMSETUP.substring(0, 4);
+                MESSET = PMSETUP.substring(5, 7);
+                DIASET = PMSETUP.substring(8, 10);
+                HORASET = Integer.parseInt(PMSETUP.substring(11, 13));
+
+                HORASETMIN = Integer.parseInt(PMSETUP.substring(14, 16));
+
+                ///////////////////////////////////////////////
+                //HACER REDONDEO
+                if (HORASETMIN > 30) {
+                    HORASET = HORASET + 1;
+                    if(HORASET == 24){
+                        HORASET=0;
+                    }
+                    if (HORASET < 10) {
+                        String aux_hora = "0" + HORASET;
+                        //System.out.println(aux_hora);
+                        FECHASET = DIASET + MESSET + AÑOSET + aux_hora;
+                        System.out.println(FECHASET);
+                    } else {
+                        //System.out.println(HORASET);
+                        FECHASET = DIASET + MESSET + AÑOSET + HORASET;
+                        System.out.println(FECHASET);
+                    }
+
+                }else{
+                    if (HORASET < 10) {
+                        String aux_hora = "0" + HORASET;
+                        //System.out.println(aux_hora);
+                        FECHASET = DIASET + MESSET + AÑOSET + aux_hora;
+                        System.out.println(FECHASET);
+                    } else {
+                        //System.out.println(HORASET);
+                        FECHASET = DIASET + MESSET + AÑOSET + HORASET;
+                        System.out.println(FECHASET);
+                    }    
+//                    FECHASET = DIASET + MESSET + AÑOSET + HORASET;
+//                        System.out.println(FECHASET);
+                }
+                
+                ////////////////////////////////////////////////////
                 do {
                     do {
                         vn.toElement(VTDNav.FC, "PMMOResult");
@@ -143,6 +231,8 @@ public class Main {
                                         if (vn.toNormalizedString(vn.getText()).contains(ar_equip2[i])) {
                                             System.out.println(vn.toNormalizedString(vn.getText()));
                                             mapaNW.put("MEDICION1", vn.toNormalizedString(vn.getText()));
+                                        } else {
+                                            mapaNW.put("MEDICION1", vn.toNormalizedString(vn.getText()));
                                         }
                                     }
 
@@ -154,6 +244,7 @@ public class Main {
                         ////////////////////////////SOLO PM TARGET///////////////////////////
                         if (vn.toElement(VTDNav.NS, "PMTarget")) {
                             //if (getCounter(vn.toString(vn.getAttrVal("measurementType"))) != null) {
+                            mapaNW.put("FECHA", FECHASET);
                             for (int j = 0; j < tipo_medicion.length; j++) {
                                 if (vn.toNormalizedString(vn.getAttrVal("measurementType")).equals(tipo_medicion[j])) {
                                     //                                vn.toElement(VTDNav.NS,"MO");
@@ -172,27 +263,43 @@ public class Main {
                                             mapaNW.put(ar_counter[i], vn.toNormalizedString(vn.getText()).toString());
                                             vn.toElement(VTDNav.P);
                                         } else {
-                                            mapaNW.put(ar_counter[i],"NULL");
+                                            mapaNW.put(ar_counter[i], "0");
                                             vn.toElement(VTDNav.NS);
                                             //System.out.println("ÉSTE NO ES UNA MEDICION PEDIDA, QUIZAS LA SIGUIENTE SI");
                                         }
                                     }
+                                    mapaNW.put(ar_counter[j], "0");
+                                } else {
+                                    mapaNW.put("MEDICION2", vn.toString(vn.getAttrVal("measurementType")));
+                                    //mapaNW.put(ar_counter[j],"0");
+                                    //vn.toElement(VTDNav.NS);
                                 }
-                                mapaNW.put("MEDICION2",vn.toString(vn.getAttrVal("measurementType")));
-                                
                             }
+                            for (int i = 0; i < ar_counter.length; i++) {
+                                if (vn.toElement(VTDNav.FC, ar_counter[i])) {
+                                    System.out.println("CONTADOR: " + ar_counter[i]);
+                                    System.out.println("VALOR: " + vn.toNormalizedString(vn.getText()).toString());
+                                    System.out.println("---------------------------------------");
+                                    mapaNW.put(ar_counter[i], vn.toNormalizedString(vn.getText()).toString());
+                                    vn.toElement(VTDNav.P);
+                                } else {
+                                    mapaNW.put(ar_counter[i], "0");
+                                    vn.toElement(VTDNav.NS);
+                                    //System.out.println("ÉSTE NO ES UNA MEDICION PEDIDA, QUIZAS LA SIGUIENTE SI");
+                                }
+                            }
+                            //mapaNW.put("",vn.toNormalizedString(vn.getText()).toString());
+
                         }
                         //ESCRIBIR
-                            tm = addCounterNulls(mapaNW);
-                            tm.putAll(mapaNW);
-                            writeCSV(filewriter, mapaNW);
-                            mapaNW.clear();
-                            
+                        writeCSV(filewriter, mapaNW);
+                        mapaNW.clear();
+
                         try {
 
                         } catch (Exception e) {
                             System.out.println(e.getMessage());
-                        }   
+                        }
                         vn.toElement(VTDNav.P, "PMMOResult");
                     } while (vn.toElement(VTDNav.NS, "PMMOResult"));
                     //System.out.println(vn.toString(vn.getCurrentIndex()));
@@ -302,20 +409,6 @@ public class Main {
         }
 
     }
-
-    public static TreeMap addCounterNulls(TreeMap csvMap) {
-        TreeMap<String, String> newmap = new TreeMap<>();
-//       PropertyFile pf=new PropertyFile();
-        Set set = mapaNW.entrySet();
-        Iterator iter = set.iterator();
-        while (iter.hasNext()) {
-            Map.Entry me = (Map.Entry) iter.next();
-            if ((validarKeyCsvMap(me.getKey().toString(), csvMap)) == 0) {
-                newmap.put(me.getKey().toString(), "");
-            }
-        }
-        return newmap;
-    }//Fin addCounternulls
 
     public static String headerCsv(TreeMap<String, String> mapaNW) {
         String header = "";
